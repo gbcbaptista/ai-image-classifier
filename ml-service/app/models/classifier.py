@@ -46,14 +46,13 @@ class ImageClassifier:
     logger.info(f"Prediction completed. Top result: {result[0][0]} ({result[0][1]:.2%})")
     return result
   
-  def predict(self, image_path: str, top_k: int = 3) -> List[Tuple[str, float]]:
-    logger.info(f"Loading image from path: {image_path}")
+  def predict(self, image: Image.Image, top_k: int = 3) -> List[Tuple[str, float]]:
+    logger.info(f"Loading image: {image}")
 
     try:
-      img = Image.open(image_path)
-      return self.predict_pil(img, top_k)
+      return self.predict_pil(image, top_k)
     except Exception as e:
-      logger.error(f"Error loading image from {image_path}: {str(e)}")
+      logger.error(f"Error loading {image}: {str(e)}")
       raise
 
     
