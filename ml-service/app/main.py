@@ -1,9 +1,16 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from app.models.classifier import ImageClassifier
-import tempfile
-import os
+from app.middleware.timing_middleware import TimingMiddleware
+from PIL import Image
+import logging
+import io
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="AI Image Classifier", version="1.0.0")
+
+app.add_middleware(TimingMiddleware)
 classifier = ImageClassifier()
 
 @app.get("/")
@@ -16,17 +23,18 @@ def health_check():
 
 @app.post("/predict")
 async def predict_image(file: UploadFile = File(...)):
+  logger.info(f"Received file: {file.filename}, type: {file.content_type}")
   
-  if file.content_type not in ["image/jpeg", "image.png"]:
+  if file.content_type not in ["image/jpeg", "image/png"]:
+    logger.warning(f"Invalid file type: {file.content_type}")
     raise HTTPException(400, "Use JPEG or PNG image")
   
-  with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
-    content = await file.read()
-    tmp.write(content)
-    tmp_path = tmp.name
-  
   try:
-    results = classifier.predict(tmp_path)
+    content = await file.read()
+    img = Image.open(io.BytesIO(content))
+
+    results = classifier.predict(img)
+    logger.info(f"Prediction successful for {file.filename}")
 
     return {
       "filename": file.filename,
@@ -35,5 +43,6 @@ async def predict_image(file: UploadFile = File(...)):
       ]
     }
 
-  finally:
-    os.unlink(tmp_path)
+  except Exception as e:
+    logger.error(f"Error processing {file.filename}: {str(e)}")
+    raise HTTPException(500, f"Error processing image: {str(e)}")
