@@ -1,0 +1,15 @@
+# Core FastAPI
+fastapi==0.115.12
+uvicorn==0.34.3
+python-multipart==0.0.20
+
+# ML & Image Processing
+tensorflow==2.19.0
+pillow==11.2.1
+numpy==2.0.2
+
+# Data validation
+pydantic==2.11.7
+
+# HTTP requests
+requests==2.32.4
