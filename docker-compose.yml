@@ -1,0 +1,72 @@
+version: "3.8"
+
+services:
+  # ML Service - Python/FastAPI
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    container_name: ai-classifier-ml
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - ai-classifier-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1.0"
+        reservations:
+          memory: 1G
+          cpus: "0.5"
+
+  # API Gateway - NestJS
+  api-gateway:
+    build:
+      context: ./nestjs-gateway
+      dockerfile: Dockerfile
+    container_name: ai-classifier-gateway
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - ML_SERVICE_URL=http://ml-service:8000
+    depends_on:
+      ml-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - ai-classifier-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+
+networks:
+  ai-classifier-network:
+    driver: bridge
+    name: ai-classifier-network
+
+volumes:
+  ml-models:
+    driver: local

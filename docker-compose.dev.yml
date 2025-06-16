@@ -1,0 +1,54 @@
+version: "3.8"
+
+services:
+  # ML Service - Development with hot reload
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+      target: development # Assuming multi-stage Dockerfile
+    container_name: ai-classifier-ml-dev
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+      - RELOAD=true
+    volumes:
+      - ./ml-service:/app
+      - ml-models:/app/models
+    networks:
+      - ai-classifier-network
+    restart: unless-stopped
+
+  # API Gateway - Development with hot reload
+  api-gateway:
+    build:
+      context: ./nestjs-gateway
+      dockerfile: Dockerfile
+      target: development # Assuming multi-stage Dockerfile
+    container_name: ai-classifier-gateway-dev
+    ports:
+      - "3001:3001"
+      - "9229:9229" # Debug port
+    environment:
+      - NODE_ENV=development
+      - ML_SERVICE_URL=http://ml-service:8000
+    volumes:
+      - ./nestjs-gateway/src:/app/src
+      - ./nestjs-gateway/package.json:/app/package.json
+    depends_on:
+      - ml-service
+    networks:
+      - ai-classifier-network
+    restart: unless-stopped
+    command: npm run start:dev
+
+networks:
+  ai-classifier-network:
+    driver: bridge
+    name: ai-classifier-network-dev
+
+volumes:
+  ml-models:
+    driver: local
